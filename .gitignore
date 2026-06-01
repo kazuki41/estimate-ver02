@@ -1,0 +1,44 @@
+# ====================================================================
+# スマート見積管理システム - 一括管理用 .gitignore
+# ====================================================================
+
+# 依存パッケージ (どのフォルダの node_modules も対象)
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# テスト結果
+coverage/
+
+# Next.js (frontend内のキャッシュやビルド成果物)
+.next/
+out/
+
+# 本番ビルド成果物 (backendやfrontend共通)
+build/
+dist/
+
+# 環境変数ファイル (※超重要：パスワードやAIの鍵をGitHubに流出させない設定)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+backend/.env
+
+# デバッグログ
+*debug.log*
+*error.log*
+
+# その他システム・ツール系
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo
+next-env.d.ts
