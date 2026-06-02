@@ -1,47 +1,73 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const [messages, setMessages] = useState([
     { id: 1, sender: "ai", text: "こんにちは！どのようなシステムをご希望ですか？実装したい機能や、追加・修正したい点などを教えてください。" }
   ]);
   const [inputText, setInputText] = useState("");
-  const [quoteItems, setQuoteItems] = useState([
-    { id: "1", name: "システム基本設計", quantity: 1, price: 150000 },
-    { id: "2", name: "ユーザー認証・ログイン機能", quantity: 1, price: 80000 },
-    { id: "3", name: "レスポンシブUI（スマホ対応）", quantity: 1, price: 50000 },
-  ]);
-  const [isTyping, setIsTyping] = useState(false); // AIが考えている最中かどうかのハタ
+  const [quoteItems, setQuoteItems] = useState<any[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+
+  // ★追加：AIが「ヒアリング中(hearing)」か「確定(final)」かを覚える状態
+  const [aiStatus, setAiStatus] = useState<"hearing" | "final">("hearing");
+  const [isSaving, setIsSaving] = useState(false); // 保存中のクルクル管理
 
   const totalAmount = quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || isTyping) return;
-    
+
     const userText = inputText;
     setMessages(prev => [...prev, { id: Date.now(), sender: "user", text: userText }]);
     setInputText("");
-    setIsTyping(true); // 「考えています」の状態にする
+    setIsTyping(true);
 
     try {
-      // さっき作った裏方の部屋（/api/chat）にデータを送る
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userText }),
       });
-      
+
       const data = await response.json();
 
-      // 裏方から戻ってきたデータで画面を書き換える
       setMessages(prev => [...prev, { id: Date.now(), sender: "ai", text: data.message }]);
       setQuoteItems(data.items);
+      setAiStatus(data.status); // ★AIのステータス（hearingかfinal）を画面に反映
     } catch (error) {
       console.error("通信エラーが発生しました", error);
     } finally {
-      setIsTyping(false); // 元に戻す
+      setIsTyping(false);
+    }
+  };
+
+  // ★追加：見積もりを保存するボタンが押された時の処理
+  const handleSaveEstimate = async () => {
+    if (quoteItems.length === 0 || aiStatus !== "final" || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/estimate/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: quoteItems }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert("🎉 見積もりの保存に成功しました！Supabaseを確認してみてください！");
+      } else {
+        alert("保存に失敗しました: " + data.message);
+      }
+    } catch (error) {
+      alert("通信エラーが発生しました。");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -52,7 +78,12 @@ export default function Home() {
         <div className="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
           <div>
             <h1 className="text-lg font-bold">AI見積もり相談チャット</h1>
-            <p className="text-xs text-slate-400">ログイン中: demo さん</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-slate-400">ログイン中: demo さん</p>
+              <Link href="/history" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">
+                履歴一覧 ➔
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -94,6 +125,19 @@ export default function Home() {
             <h2 className="text-xl font-bold text-slate-900">概算見積プレビュー</h2>
             <p className="text-xs text-slate-400 mt-1">チャットの要望に合わせてリアルタイムに更新されます</p>
           </div>
+          <div className="flex gap-2">
+            {/* ★改造：「final」状態の時だけ青く光って押せるボタンに変身 */}
+            <button
+              onClick={handleSaveEstimate}
+              disabled={aiStatus !== "final" || isSaving}
+              className={`text-xs font-medium px-3 py-2 rounded border transition ${aiStatus === "final"
+                  ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 cursor-pointer shadow-sm"
+                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                }`}
+            >
+              {isSaving ? "保存中..." : "見積もりを保存"}
+            </button>
+          </div>
         </div>
 
         <div className="bg-slate-950 text-white p-6 rounded-xl mb-6 shadow-sm">
@@ -104,26 +148,32 @@ export default function Home() {
         <div className="flex-1">
           <h3 className="text-sm font-bold text-slate-700 mb-3">【お見積り内訳明細】</h3>
           <div className="border border-slate-200 rounded-lg overflow-hidden">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                  <th className="p-3">品名 / 項目</th>
-                  <th className="p-3 text-center w-16">数量</th>
-                  <th className="p-3 text-right w-28">単価</th>
-                  <th className="p-3 text-right w-28">金額</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {quoteItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 text-slate-900 font-medium">{item.name}</td>
-                    <td className="p-3 text-center text-slate-600">{item.quantity}</td>
-                    <td className="p-3 text-right text-slate-600">¥{item.price.toLocaleString()}</td>
-                    <td className="p-3 text-right text-slate-900 font-semibold">¥{(item.price * item.quantity).toLocaleString()}</td>
+            {quoteItems.length === 0 ? (
+              <div className="p-8 text-center text-sm text-slate-400 bg-slate-50">
+                チャットで要望を伝えると、ここに見積内訳が表示されます
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                    <th className="p-3">品名 / 項目</th>
+                    <th className="p-3 text-center w-16">数量</th>
+                    <th className="p-3 text-right w-28">単価</th>
+                    <th className="p-3 text-right w-28">金額</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {quoteItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50">
+                      <td className="p-3 text-slate-900 font-medium">{item.name}</td>
+                      <td className="p-3 text-center text-slate-600">{item.quantity}</td>
+                      <td className="p-3 text-right text-slate-600">¥{item.price.toLocaleString()}</td>
+                      <td className="p-3 text-right text-slate-900 font-semibold">¥{(item.price * item.quantity).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
