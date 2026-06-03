@@ -4,19 +4,22 @@ import { supabase } from "@/app/supabase";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { items } = body;
+    // ★追加：画面から顧客IDと自社情報IDも受け取る
+    const { items, customerId, companyInfoId } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json({ message: "保存する明細がありません。" }, { status: 400 });
     }
 
-    // 1. estimatesテーブルに見積書の「親データ」を1件登録
+    // 1. estimatesテーブルに見積書の「親データ」を登録
     const { data: estimateData, error: estimateError } = await supabase
       .from("estimates")
       .insert([
         {
-          status: "draft", // 最初は下書き状態
-          tax_rate: 0.10,  // 消費税10%
+          status: "draft",
+          tax_rate: 0.10,
+          customer_id: customerId || null,      // ★新しく作った列に保存！
+          company_info_id: companyInfoId || null, // ★新しく作った列に保存！
         }
       ])
       .select()
@@ -28,8 +31,7 @@ export async function POST(request: Request) {
 
     const estimateId = estimateData.id;
 
-    // 2. estimate_itemsテーブルに見積書の「子データ（明細）」をまとめて登録
-    // ★新方針：当時の商品名と単価をそのまま焼き付ける「スナップショット設計」
+    // 2. estimate_itemsテーブルに見積書の「明細」をまとめて登録
     const itemsToInsert = items.map((item: { id: string; name: string; quantity: number; price: number }) => ({
       estimate_id: estimateId,
       product_id: item.id,
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "見積もりを正常に保存しました！",
+      message: "顧客・自社情報を含めた見積もりを正常に保存しました！",
       estimateId: estimateId
     });
 

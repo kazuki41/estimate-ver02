@@ -1,181 +1,143 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
-export default function Home() {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "ai", text: "こんにちは！どのようなシステムをご希望ですか？実装したい機能や、追加・修正したい点などを教えてください。" }
-  ]);
-  const [inputText, setInputText] = useState("");
-  const [quoteItems, setQuoteItems] = useState<any[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
+export default function DashboardPage() {
+  const [summary, setSummary] = useState({
+    totalCount: 0,
+    draftCount: 0,
+    sentCount: 0,
+    totalSentAmount: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  // ★追加：AIが「ヒアリング中(hearing)」か「確定(final)」かを覚える状態
-  const [aiStatus, setAiStatus] = useState<"hearing" | "final">("hearing");
-  const [isSaving, setIsSaving] = useState(false); // 保存中のクルクル管理
-
-  const totalAmount = quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping) return;
-
-    const userText = inputText;
-    setMessages(prev => [...prev, { id: Date.now(), sender: "user", text: userText }]);
-    setInputText("");
-    setIsTyping(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText }),
-      });
-
-      const data = await response.json();
-
-      setMessages(prev => [...prev, { id: Date.now(), sender: "ai", text: data.message }]);
-      setQuoteItems(data.items);
-      setAiStatus(data.status); // ★AIのステータス（hearingかfinal）を画面に反映
-    } catch (error) {
-      console.error("通信エラーが発生しました", error);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  // ★追加：見積もりを保存するボタンが押された時の処理
-  const handleSaveEstimate = async () => {
-    if (quoteItems.length === 0 || aiStatus !== "final" || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      const response = await fetch("/api/estimate/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: quoteItems }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert("🎉 見積もりの保存に成功しました！Supabaseを確認してみてください！");
-      } else {
-        alert("保存に失敗しました: " + data.message);
+  // ダッシュボード用データの読み込み
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch("/api/dashboard?_t=" + Date.now());
+        const data = await res.json();
+        setSummary(data);
+      } catch (error) {
+        console.error("ダッシュボードデータの取得に失敗", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      alert("通信エラーが発生しました。");
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    };
+    fetchSummary();
+  }, []);
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white font-sans">
-      {/* 左側：チャットエリア */}
-      <div className="w-1/2 flex flex-col border-r border-slate-700">
-        <div className="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
+    <div className="min-h-screen bg-slate-900 text-white font-sans p-8">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* 上部ヘッダー */}
+        <div className="flex justify-between items-center mb-10 border-b border-slate-800 pb-6">
           <div>
-            <h1 className="text-lg font-bold">AI見積もり相談チャット</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-xs text-slate-400">ログイン中: demo さん</p>
-              <Link href="/history" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">
-                履歴一覧 ➔
-              </Link>
-            </div>
+            <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+              見積管理DX ダッシュボード
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">現在の営業状況と見積もり作成状況のサマリー</p>
+          </div>
+          <div className="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-400">
+            ログイン: demo さん
           </div>
         </div>
 
-        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-800/50">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${msg.sender === "user" ? "bg-blue-600 text-white rounded-tr-none" : "bg-slate-700 text-slate-100 rounded-tl-none"}`}>
-                {msg.text}
+        {loading ? (
+          <div className="text-center py-24 text-slate-400 animate-pulse text-sm">データを集計中...</div>
+        ) : (
+          <div className="space-y-8">
+            
+            {/* 📈 統計カード（4列レイアウト） */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              {/* カード1: 提出済み売上見込 */}
+              <div className="bg-slate-800 border border-slate-700/70 p-6 rounded-2xl shadow-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 text-4xl text-emerald-500/10 font-black select-none group-hover:scale-110 transition-transform">¥</div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">提出済 合計金額(税別)</p>
+                <p className="text-2xl font-black text-emerald-400 mt-2 font-mono">
+                  ¥{summary.totalSentAmount.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-1">顧客へ提示中の売上見込み総額</p>
+              </div>
+
+              {/* カード2: 総件数 */}
+              <div className="bg-slate-800 border border-slate-700/70 p-6 rounded-2xl shadow-xl">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">総見積作成件数</p>
+                <p className="text-3xl font-black text-white mt-2 font-mono">
+                  {summary.totalCount} <span className="text-xs font-normal text-slate-400">件</span>
+                </p>
+                <p className="text-[10px] text-slate-500 mt-2">システムで起票された全履歴</p>
+              </div>
+
+              {/* カード3: 提出済件数 */}
+              <div className="bg-slate-800 border border-slate-700/70 p-6 rounded-2xl shadow-xl border-l-4 border-l-emerald-500">
+                <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">提出済み (sent)</p>
+                <p className="text-3xl font-black text-white mt-2 font-mono">
+                  {summary.sentCount} <span className="text-xs font-normal text-slate-400">件</span>
+                </p>
+                <p className="text-[10px] text-slate-500 mt-2">クライアントへアプローチ中の案件</p>
+              </div>
+
+              {/* カード4: 下書き件数 */}
+              <div className="bg-slate-800 border border-slate-700/70 p-6 rounded-2xl shadow-xl border-l-4 border-l-amber-500">
+                <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">下書き (draft)</p>
+                <p className="text-3xl font-black text-white mt-2 font-mono">
+                  {summary.draftCount} <span className="text-xs font-normal text-slate-400">件</span>
+                </p>
+                <p className="text-[10px] text-slate-500 mt-2">チャットから保存された調整中の案件</p>
+              </div>
+
+            </div>
+
+            {/* 🚀 メインアクション・ナビゲーションパネル */}
+            <div className="bg-slate-800/40 border border-slate-800 rounded-2xl p-6">
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">主要機能へのアクセス</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {/* リンク1: AIチャット */}
+                <Link href="/chat" className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 p-6 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 group flex flex-col justify-between min-h-[140px]">
+                  <div>
+                    <h3 className="font-black text-lg text-white flex items-center gap-2">
+                      AI自動見積チャット 🚀
+                    </h3>
+                    <p className="text-xs text-blue-100/80 mt-1.5 leading-relaxed">
+                      対話形式で要件を伝えるだけで、AIがマスターから適正単価を引いて自動で見積明細を組み立てます。
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-white bg-blue-800/60 px-2 py-1 rounded w-fit mt-4 group-hover:bg-blue-900/60 transition">チャットを始める →</span>
+                </Link>
+
+                {/* リンク2: 履歴一覧 */}
+                <Link href="/history" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 p-6 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 group flex flex-col justify-between min-h-[140px]">
+                  <div>
+                    <h3 className="font-bold text-base text-slate-200">保存済み見積もり履歴 📄</h3>
+                    <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                      これまでに作成した見積もりの一括検索、ステータスの切り替え（下書き/提出済）、プロ仕様のPDF出力・印刷が行えます。
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-300 bg-slate-700 px-2 py-1 rounded w-fit mt-4 group-hover:bg-slate-600 transition">履歴一覧を見る →</span>
+                </Link>
+
+                {/* リンク3: マスター管理 */}
+                <Link href="/master" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 p-6 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 group flex flex-col justify-between min-h-[140px]">
+                  <div>
+                    <h3 className="font-bold text-base text-slate-200">各種マスター管理 ⚙️</h3>
+                    <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                      自社情報（インボイス番号等）、顧客情報、商品単価・課金タイプ（一括/月額）を管理。AIの知識ベースとも連動します。
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-300 bg-slate-700 px-2 py-1 rounded w-fit mt-4 group-hover:bg-slate-600 transition">設定画面を開く →</span>
+                </Link>
+
               </div>
             </div>
-          ))}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-slate-700 text-slate-400 p-3 rounded-2xl rounded-tl-none text-xs animate-pulse">
-                AIが自動見積もりを計算中...
-              </div>
-            </div>
-          )}
-        </div>
 
-        <form onSubmit={handleSend} className="p-4 bg-slate-800 border-t border-slate-700 flex gap-2">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="例：管理画面を追加して / 金額を少し抑えて..."
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-          />
-          <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-5 py-2 rounded-lg transition">
-            送信
-          </button>
-        </form>
-      </div>
-
-      {/* 右側：見積プレビューエリア */}
-      <div className="w-1/2 flex flex-col bg-white text-slate-800 p-6 overflow-y-auto">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">概算見積プレビュー</h2>
-            <p className="text-xs text-slate-400 mt-1">チャットの要望に合わせてリアルタイムに更新されます</p>
           </div>
-          <div className="flex gap-2">
-            {/* ★改造：「final」状態の時だけ青く光って押せるボタンに変身 */}
-            <button
-              onClick={handleSaveEstimate}
-              disabled={aiStatus !== "final" || isSaving}
-              className={`text-xs font-medium px-3 py-2 rounded border transition ${aiStatus === "final"
-                  ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 cursor-pointer shadow-sm"
-                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                }`}
-            >
-              {isSaving ? "保存中..." : "見積もりを保存"}
-            </button>
-          </div>
-        </div>
+        )}
 
-        <div className="bg-slate-950 text-white p-6 rounded-xl mb-6 shadow-sm">
-          <p className="text-xs text-slate-400 mb-1">現在の合計金額（税別）</p>
-          <p className="text-3xl font-black text-amber-400">¥{totalAmount.toLocaleString()}</p>
-        </div>
-
-        <div className="flex-1">
-          <h3 className="text-sm font-bold text-slate-700 mb-3">【お見積り内訳明細】</h3>
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
-            {quoteItems.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-400 bg-slate-50">
-                チャットで要望を伝えると、ここに見積内訳が表示されます
-              </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                    <th className="p-3">品名 / 項目</th>
-                    <th className="p-3 text-center w-16">数量</th>
-                    <th className="p-3 text-right w-28">単価</th>
-                    <th className="p-3 text-right w-28">金額</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {quoteItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="p-3 text-slate-900 font-medium">{item.name}</td>
-                      <td className="p-3 text-center text-slate-600">{item.quantity}</td>
-                      <td className="p-3 text-right text-slate-600">¥{item.price.toLocaleString()}</td>
-                      <td className="p-3 text-right text-slate-900 font-semibold">¥{(item.price * item.quantity).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

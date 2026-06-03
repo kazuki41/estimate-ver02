@@ -3,7 +3,6 @@ import { supabase } from "@/app/supabase";
 
 export async function GET(request: Request) {
   try {
-    // URLから「どの見積もりIDの詳細がほしいか」を読み取る（例: /api/estimate/detail?id=xxx）
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -11,17 +10,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "見積もりIDが指定されていません。" }, { status: 400 });
     }
 
-    // 指定されたIDに紐づく見積明細（estimate_items）をすべて取得する
-    const { data: items, error } = await supabase
-      .from("estimate_items")
-      .select("id, product_name, quantity, price")
-      .eq("estimate_id", id); // IDが一致するものだけを狙い撃ち
+    // ★大改造：estimates（親）を起点に、顧客・自社・明細のすべてをガシャッと一撃で取得！
+    const { data: estimate, error } = await supabase
+      .from("estimates")
+      .select(`
+        id,
+        created_at,
+        tax_rate,
+        customers (
+          company_name,
+          customer_name,
+          address
+        ),
+        company_info (
+          name,
+          invoice_number
+        ),
+        estimate_items (
+          id,
+          product_name,
+          quantity,
+          price
+        )
+      `)
+      .eq("id", id)
+      .single(); // 1件だけを取得
 
     if (error) {
       throw new Error(`詳細データの取得に失敗: ${error.message}`);
     }
 
-    return NextResponse.json(items);
+    return NextResponse.json(estimate);
 
   } catch (error: any) {
     console.error("詳細取得エラー:", error);
