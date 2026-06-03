@@ -10,7 +10,7 @@ export default function MasterPage() {
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  
+
   // 👥 顧客マスター用の状態
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -160,7 +160,7 @@ export default function MasterPage() {
     if (customers.length === 0) return alert("エクスポートするデータがありません。");
     let csvContent = "会社名,担当者名,電話番号,住所\n";
     customers.forEach((c) => {
-      const row = [`"${(c.company_name || "").replace(/"/g, '""')}"`,`"${(c.customer_name || "").replace(/"/g, '""')}"`,`"${(c.tel || "").replace(/"/g, '""')}"`,`"${(c.address || "").replace(/"/g, '""')}"`].join(",");
+      const row = [`"${(c.company_name || "").replace(/"/g, '""')}"`, `"${(c.customer_name || "").replace(/"/g, '""')}"`, `"${(c.tel || "").replace(/"/g, '""')}"`, `"${(c.address || "").replace(/"/g, '""')}"`].join(",");
       csvContent += row + "\n";
     });
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
@@ -200,7 +200,7 @@ export default function MasterPage() {
     if (products.length === 0) return alert("エクスポートするデータがありません。");
     let csvContent = "商品名,カテゴリ,標準単価,単位,課金タイプ(one-timeまたはrecurring),商品説明\n";
     products.forEach((p) => {
-      const row = [`"${(p.name || "").replace(/"/g, '""')}"`,`"${(p.category || "").replace(/"/g, '""')}"`,p.price,`"${(p.unit || "1式").replace(/"/g, '""')}"`,p.billing_type || "one-time",`"${(p.description || "").replace(/"/g, '""')}"`].join(",");
+      const row = [`"${(p.name || "").replace(/"/g, '""')}"`, `"${(p.category || "").replace(/"/g, '""')}"`, p.price, `"${(p.unit || "1式").replace(/"/g, '""')}"`, p.billing_type || "one-time", `"${(p.description || "").replace(/"/g, '""')}"`].join(",");
       csvContent += row + "\n";
     });
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
@@ -277,16 +277,21 @@ export default function MasterPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans p-8">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* ヘッダー */}
         <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">スマート見積システム マスター管理</h1>
             <p className="text-sm text-slate-400 mt-1">基礎データの管理・一括削除機能</p>
           </div>
-          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg transition border border-slate-700">
-            ダッシュボードに戻る
-          </Link>
+          <div>
+            <Link href="/chat" className="mr-[20px] bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg transition border border-slate-700">
+              チャットに戻る
+            </Link>
+            <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-4 py-2 rounded-lg transition border border-slate-700">
+              ダッシュボードに戻る
+            </Link>
+          </div>
         </div>
 
         {/* タブ */}

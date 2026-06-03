@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -10,7 +10,7 @@ function ChatHome() {
   const editId = searchParams.get("edit");
 
   const [messages, setMessages] = useState<any[]>([
-    { id: 1, sender: "ai", text: "こんにちは！どのようなシステムをご希望ですか？実装したい機能や、追加・修正したい点などを教えてください。" }
+    { id: 1, sender: "ai", text: "こんにちは! どのようなシステムをご希望ですか？実装したい機能や、追加・修正したい点などを教えてください。" }
   ]);
   const [inputText, setInputText] = useState("");
   const [quoteItems, setQuoteItems] = useState<any[]>([]);
@@ -24,6 +24,13 @@ function ChatHome() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
+  // 📄 内部的な管理用のステータス（UIからは見えなくなります）
+  const [estimateStatus, setEstimateStatus] = useState<"draft" | "submitted">("draft");
+  const [isOpenPDFModal, setIsOpenPDFModal] = useState(false); 
+
+  // 🛡️ 復元処理の重複防止ロック
+  const hasRestored = useRef(false);
+
   // 画面起動時に顧客マスター一覧を読み込む
   useEffect(() => {
     const loadCustomers = async () => {
@@ -31,7 +38,7 @@ function ChatHome() {
         const response = await fetch("/api/customers");
         const data = await response.json();
         setCustomers(data);
-        if (data && data.length > 0) {
+        if (data && data.length > 0 && !editId) { 
           setSelectedCustomerId(data[0].id);
         }
       } catch (error) {
@@ -39,34 +46,35 @@ function ChatHome() {
       }
     };
     loadCustomers();
-  }, []);
+  }, [editId]);
 
-  // ==========================================
-  // ✨ 過去データ復元ロジック（★ユーザー提案：古いID構造を完全破棄！）
-  // ==========================================
+  // 過去データ復元ロジック
   useEffect(() => {
-    if (editId) {
+    if (editId && !hasRestored.current) {
+      hasRestored.current = true;
+
       const loadPastEstimate = async () => {
         try {
           const response = await fetch(`/api/estimate/detail?id=${editId}`);
           const data = await response.json();
           
           if (data && data.estimate_items) {
-            // 💡 過去の「item.id」や「product_name」といった古い構造をここで跡形もなく【破棄】します！
-            // チャットで新規作成した時と100%同じピュアな配列（id、name、price、quantity）に変換します。
             const restoredItems = data.estimate_items.map((item: any, idx: number) => ({
-              id: Date.now() + idx, // 新しい画面表示用のユニークID
-              name: item.product_name, // 👈 チャットと同じ「name」に統一！
+              id: Date.now() + idx, 
+              name: item.product_name, 
               price: item.price,
               quantity: item.quantity
             }));
             
             setQuoteItems(restoredItems);
             setAiStatus("final");
-            setIsChanged(false); // 復元直後は無変更状態（保存ボタン無効）
+            setIsChanged(false); 
 
             if (data.customers?.id) {
               setSelectedCustomerId(data.customers.id);
+            }
+            if (data.status) {
+              setEstimateStatus(data.status === "submitted" ? "submitted" : "draft");
             }
 
             setMessages(prev => [
@@ -83,6 +91,7 @@ function ChatHome() {
         } catch (error) {
           console.error("過去データの復元に失敗しました", error);
           alert("データの復元に失敗しました。");
+          hasRestored.current = false;
         }
       };
       loadPastEstimate();
@@ -97,23 +106,27 @@ function ChatHome() {
 
     const userText = inputText;
     setMessages(prev => [...prev, { id: Date.now(), sender: "user", text: userText }]);
-    setInputText("");
+    setInputText(""); 
     setIsTyping(true);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          message: userText,
-          currentItems: quoteItems 
+        body: JSON.stringify({
+          message: userText, 
+          messages: [...messages.map(m => ({
+            role: m.sender === "user" ? "user" : "assistant",
+            content: m.text
+          })), { role: "user", content: userText }], 
+          currentItems: quoteItems, 
         }),
       });
 
       const data = await response.json();
 
       setMessages(prev => [...prev, { id: Date.now(), sender: "ai", text: data.message }]);
-      setQuoteItems(data.items);
+      setQuoteItems(data.items || []);
       setAiStatus(data.status);
       setIsChanged(true);
     } catch (error) {
@@ -125,7 +138,7 @@ function ChatHome() {
 
   // 見積もり保存処理
   const handleSaveEstimate = async () => {
-    if (quoteItems.length === 0 || aiStatus !== "final" || !isChanged || isSaving) return;
+    if (quoteItems.length === 0 || !isChanged || isSaving) return;
     if (!selectedCustomerId) {
       alert("顧客を選択してください。");
       return;
@@ -133,12 +146,9 @@ function ChatHome() {
 
     setIsSaving(true);
     try {
-      // 🛡️ 【無敵の二重保険ロジック】
-      // 保存APIが「name」「product_name」のどちらのキーを狙っていても100%成功するように、
-      // 両方のプロパティを贅沢にコピーして送信します。これでキーの迷子は絶対に起きません。
       const finalItems = quoteItems.map((item) => ({
         name: item.name,
-        product_name: item.name, // 👈 どちらを要求されても大丈夫なように複製
+        product_name: item.name, 
         price: Number(item.price),
         quantity: Number(item.quantity)
       }));
@@ -149,7 +159,8 @@ function ChatHome() {
         body: JSON.stringify({
           items: finalItems,
           customerId: selectedCustomerId,
-          companyInfoId: "60b94a95-140c-4a7f-a2c1-8d0d77001c1c"
+          companyInfoId: "60b94a95-140c-4a7f-a2c1-8d0d77001c1c",
+          status: estimateStatus 
         }),
       });
 
@@ -168,10 +179,17 @@ function ChatHome() {
     }
   };
 
+  const handleTriggerPrint = () => {
+    window.print();
+  };
+
+  const currentCustomerName = customers.find(c => c.id === selectedCustomerId)?.company_name || "御中";
+
   return (
-    <div className="flex h-screen bg-slate-900 text-white font-sans">
+    <div className="flex h-screen bg-slate-900 text-white font-sans print:bg-white print:text-black">
+      
       {/* 左側：チャットエリア */}
-      <div className="w-1/2 flex flex-col border-r border-slate-700">
+      <div className="w-1/2 flex flex-col border-r border-slate-700 print:hidden">
         <div className="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
           <div>
             <h1 className="text-lg font-bold">AI見積もり相談チャット</h1>
@@ -203,7 +221,8 @@ function ChatHome() {
       </div>
 
       {/* 右側：見積プレビューエリア */}
-      <div className="w-1/2 flex flex-col bg-white text-slate-800 p-6 overflow-y-auto">
+      <div className="w-1/2 flex flex-col bg-white text-slate-800 p-6 overflow-y-auto print:hidden">
+        
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900">概算見積プレビュー</h2>
@@ -211,10 +230,22 @@ function ChatHome() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setIsOpenPDFModal(true)}
+              disabled={quoteItems.length === 0}
+              className={`text-xs font-bold px-3 py-2 rounded border transition ${
+                quoteItems.length > 0
+                  ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-500 cursor-pointer shadow-sm"
+                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+              }`}
+            >
+              📄 PDFプレビュー
+            </button>
+
+            <button
               onClick={handleSaveEstimate}
-              disabled={aiStatus !== "final" || !isChanged || isSaving}
+              disabled={quoteItems.length === 0 || !isChanged || isSaving}
               className={`text-xs font-medium px-3 py-2 rounded border transition ${
-                aiStatus === "final" && isChanged && !isSaving
+                quoteItems.length > 0 && isChanged && !isSaving
                   ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 cursor-pointer shadow-sm"
                   : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
               }`}
@@ -224,7 +255,7 @@ function ChatHome() {
           </div>
         </div>
 
-        {/* 👥 お見積り先（宛先）の選択プルダウン */}
+        {/* お見積り先選択 */}
         <div className="mb-4 bg-slate-50 border border-slate-200 p-3 rounded-xl">
           <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
             👥 お見積り先（宛先）の選択
@@ -233,7 +264,7 @@ function ChatHome() {
             value={selectedCustomerId}
             onChange={(e) => {
               setSelectedCustomerId(e.target.value);
-              setIsChanged(true); // 会社名を変えたらボタンを点灯させる
+              setIsChanged(true); 
             }}
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-500 shadow-sm"
           >
@@ -284,6 +315,85 @@ function ChatHome() {
           </div>
         </div>
       </div>
+
+      {/* 🖥️ 全画面PDFプレビューモーダル（ステータス表示を徹底排除） */}
+      {isOpenPDFModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-start overflow-y-auto p-6 print:p-0 print:bg-white print:backdrop-blur-none print:static">
+          
+          {/* コントロールヘッダー（左側のトグルを削除してスッキリ化！） */}
+          <div className="w-full max-w-3xl bg-slate-800 border border-slate-700 rounded-2xl p-4 flex justify-between items-center mb-6 shadow-2xl print:hidden">
+            <div className="text-xs font-bold text-slate-300">
+              📄 見積書レイアウト確認プレビュー
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={handleTriggerPrint} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow shadow-emerald-950/50">🖨️ 本番印刷 / PDF保存</button>
+              <button onClick={() => setIsOpenPDFModal(false)} className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-4 py-2 rounded-xl transition">閉じる</button>
+            </div>
+          </div>
+
+          {/* 📄 A4サイズ見積書（右上のバッジも完全削除！） */}
+          <div className="w-full max-w-3xl bg-white text-black p-12 shadow-2xl rounded-none border border-slate-200 flex flex-col justify-between min-h-[1000px] font-sans print:shadow-none print:border-none print:p-0 print:max-w-full print:w-full">
+            <div>
+              {/* 見積書ヘッダー */}
+              <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold tracking-widest text-slate-900">御 見 積 書</h2>
+                  <p className="text-xs text-slate-500 font-mono mt-1">見積番号: {editId ? editId.substring(0,8) : "新規発行"}</p>
+                </div>
+              </div>
+
+              {/* 宛先 & 発行元 */}
+              <div className="grid grid-cols-2 gap-8 mb-10 text-sm">
+                <div className="space-y-2">
+                  <p className="text-lg font-bold border-b border-slate-400 pb-1 text-slate-900">{currentCustomerName} 御中</p>
+                  <p className="text-slate-600">下記の通り、概算の御見積申し上げます。</p>
+                  <div className="pt-4">
+                    <p className="text-xs text-slate-500">御見積合計金額（税別）</p>
+                    <p className="text-2xl font-black text-slate-900 border-b-2 border-slate-800 pb-1 mt-1">¥{totalAmount.toLocaleString()}-</p>
+                  </div>
+                </div>
+                <div className="text-right space-y-1 text-xs text-slate-700">
+                  <p className="text-sm font-bold text-slate-900">スマート見積システム株式会社</p>
+                  <p>〒100-0005 東京都千代田区丸の内1-1-1</p>
+                  <p>TEL: 03-1234-5678</p>
+                  <p className="pt-2 font-mono text-[10px] text-slate-500">インボイス番号: T1234567890123</p>
+                  <p className="pt-2 text-slate-400">発行日: {new Date().toLocaleDateString("ja-JP")}</p>
+                </div>
+              </div>
+
+              {/* 明細テーブル */}
+              <table className="w-full text-left border-collapse text-xs mb-8">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-400 font-bold text-slate-800">
+                    <th className="p-3 border border-slate-300">品名 / 項目</th>
+                    <th className="p-3 text-center w-16 border border-slate-300">数量</th>
+                    <th className="p-3 text-right w-28 border border-slate-300">単価</th>
+                    <th className="p-3 text-right w-28 border border-slate-300">金額</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {quoteItems.map((item) => (
+                    <tr key={item.id}>
+                      <td className="p-3 border border-slate-200 font-medium text-slate-900">{item.name}</td>
+                      <td className="p-3 text-center border border-slate-200 text-slate-700">{item.quantity}</td>
+                      <td className="p-3 text-right border border-slate-200 text-slate-700">¥{item.price.toLocaleString()}</td>
+                      <td className="p-3 text-right border border-slate-200 font-bold text-slate-900">¥{(item.price * item.quantity).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 備考・フッター */}
+            <div className="border-t border-slate-300 pt-4 text-[10px] text-slate-400 flex justify-between items-center">
+              <p>※本御見積書はAIによる概算算定ロジックを元に生成されたものです。</p>
+              <p className="font-mono">Page 1 / 1</p>
+            </div>
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 }

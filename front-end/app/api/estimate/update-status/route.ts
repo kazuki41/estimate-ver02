@@ -1,16 +1,17 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { supabase } from "@/app/supabase";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { id, status } = body;
+    const { id, status } = await request.json();
 
     if (!id || !status) {
-      return NextResponse.json({ message: "IDまたはステータスが不足しています。" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "IDまたはステータスが不足しています。" }, { status: 400 });
     }
 
-    // 🔄 Supabaseのestimatesテーブルのstatusを直接書き換える！
+    // 🚀 指定された見積もりIDの status カラム（draft または submitted）をピンポイントで更新！
     const { error } = await supabase
       .from("estimates")
       .update({ status: status })
@@ -18,9 +19,9 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, message: "ステータスを更新しました！" });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("ステータス更新エラー:", error);
-    return NextResponse.json({ message: "サーバーエラーが発生しました。" }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || "ステータス更新に失敗しました。" }, { status: 500 });
   }
 }
