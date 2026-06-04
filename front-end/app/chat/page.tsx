@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/app/supabase";
 
 function ChatHome() {
   const router = useRouter();
@@ -26,7 +27,8 @@ function ChatHome() {
 
   // 📄 内部的な管理用のステータス（UIからは見えなくなります）
   const [estimateStatus, setEstimateStatus] = useState<"draft" | "submitted">("draft");
-  const [isOpenPDFModal, setIsOpenPDFModal] = useState(false); 
+  const [isOpenPDFModal, setIsOpenPDFModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // 🛡️ 復元処理の重複防止ロック
   const hasRestored = useRef(false);
@@ -38,7 +40,7 @@ function ChatHome() {
         const response = await fetch("/api/customers");
         const data = await response.json();
         setCustomers(data);
-        if (data && data.length > 0 && !editId) { 
+        if (data && data.length > 0 && !editId) {
           setSelectedCustomerId(data[0].id);
         }
       } catch (error) {
@@ -47,6 +49,17 @@ function ChatHome() {
     };
     loadCustomers();
   }, [editId]);
+
+  // 👤 ログイン中のユーザーのUUIDをSupabaseから取得して、上の箱に保存する
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    fetchUser();
+  }, []);
 
   // 過去データ復元ロジック
   useEffect(() => {
@@ -57,18 +70,18 @@ function ChatHome() {
         try {
           const response = await fetch(`/api/estimate/detail?id=${editId}`);
           const data = await response.json();
-          
+
           if (data && data.estimate_items) {
             const restoredItems = data.estimate_items.map((item: any, idx: number) => ({
-              id: Date.now() + idx, 
-              name: item.product_name, 
+              id: Date.now() + idx,
+              name: item.product_name,
               price: item.price,
               quantity: item.quantity
             }));
-            
+
             setQuoteItems(restoredItems);
             setAiStatus("final");
-            setIsChanged(false); 
+            setIsChanged(false);
 
             if (data.customers?.id) {
               setSelectedCustomerId(data.customers.id);
@@ -79,10 +92,10 @@ function ChatHome() {
 
             setMessages(prev => [
               ...prev,
-              { 
-                id: Date.now(), 
-                sender: "ai", 
-                text: `過去の見積もり（番号: ${editId.substring(0, 8)}...）の明細と顧客情報を復元しました！宛先を変更したい場合は、右側のプルダウンから再選択できます。内容を修正する場合はAIに続けてご指示ください。` 
+              {
+                id: Date.now(),
+                sender: "ai",
+                text: `過去の見積もり（番号: ${editId.substring(0, 8)}...）の明細と顧客情報を復元しました！宛先を変更したい場合は、右側のプルダウンから再選択できます。内容を修正する場合はAIに続けてご指示ください。`
               }
             ]);
 
@@ -106,7 +119,7 @@ function ChatHome() {
 
     const userText = inputText;
     setMessages(prev => [...prev, { id: Date.now(), sender: "user", text: userText }]);
-    setInputText(""); 
+    setInputText("");
     setIsTyping(true);
 
     try {
@@ -114,12 +127,12 @@ function ChatHome() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: userText, 
+          message: userText,
           messages: [...messages.map(m => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.text
-          })), { role: "user", content: userText }], 
-          currentItems: quoteItems, 
+          })), { role: "user", content: userText }],
+          currentItems: quoteItems,
         }),
       });
 
@@ -148,7 +161,7 @@ function ChatHome() {
     try {
       const finalItems = quoteItems.map((item) => ({
         name: item.name,
-        product_name: item.name, 
+        product_name: item.name,
         price: Number(item.price),
         quantity: Number(item.quantity)
       }));
@@ -160,7 +173,8 @@ function ChatHome() {
           items: finalItems,
           customerId: selectedCustomerId,
           companyInfoId: "60b94a95-140c-4a7f-a2c1-8d0d77001c1c",
-          status: estimateStatus 
+          status: estimateStatus,
+          userId: currentUserId
         }),
       });
 
@@ -187,7 +201,7 @@ function ChatHome() {
 
   return (
     <div className="flex h-screen bg-slate-900 text-white font-sans print:bg-white print:text-black">
-      
+
       {/* 左側：チャットエリア */}
       <div className="w-1/2 flex flex-col border-r border-slate-700 print:hidden">
         <div className="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
@@ -222,7 +236,7 @@ function ChatHome() {
 
       {/* 右側：見積プレビューエリア */}
       <div className="w-1/2 flex flex-col bg-white text-slate-800 p-6 overflow-y-auto print:hidden">
-        
+
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900">概算見積プレビュー</h2>
@@ -232,11 +246,10 @@ function ChatHome() {
             <button
               onClick={() => setIsOpenPDFModal(true)}
               disabled={quoteItems.length === 0}
-              className={`text-xs font-bold px-3 py-2 rounded border transition ${
-                quoteItems.length > 0
+              className={`text-xs font-bold px-3 py-2 rounded border transition ${quoteItems.length > 0
                   ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-500 cursor-pointer shadow-sm"
                   : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-              }`}
+                }`}
             >
               📄 PDFプレビュー
             </button>
@@ -244,11 +257,10 @@ function ChatHome() {
             <button
               onClick={handleSaveEstimate}
               disabled={quoteItems.length === 0 || !isChanged || isSaving}
-              className={`text-xs font-medium px-3 py-2 rounded border transition ${
-                quoteItems.length > 0 && isChanged && !isSaving
+              className={`text-xs font-medium px-3 py-2 rounded border transition ${quoteItems.length > 0 && isChanged && !isSaving
                   ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 cursor-pointer shadow-sm"
                   : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-              }`}
+                }`}
             >
               {isSaving ? "保存中..." : "見積もりを保存"}
             </button>
@@ -264,7 +276,7 @@ function ChatHome() {
             value={selectedCustomerId}
             onChange={(e) => {
               setSelectedCustomerId(e.target.value);
-              setIsChanged(true); 
+              setIsChanged(true);
             }}
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-500 shadow-sm"
           >
@@ -319,7 +331,7 @@ function ChatHome() {
       {/* 🖥️ 全画面PDFプレビューモーダル（ステータス表示を徹底排除） */}
       {isOpenPDFModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-start overflow-y-auto p-6 print:p-0 print:bg-white print:backdrop-blur-none print:static">
-          
+
           {/* コントロールヘッダー（左側のトグルを削除してスッキリ化！） */}
           <div className="w-full max-w-3xl bg-slate-800 border border-slate-700 rounded-2xl p-4 flex justify-between items-center mb-6 shadow-2xl print:hidden">
             <div className="text-xs font-bold text-slate-300">
@@ -338,7 +350,7 @@ function ChatHome() {
               <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-8">
                 <div>
                   <h2 className="text-3xl font-bold tracking-widest text-slate-900">御 見 積 書</h2>
-                  <p className="text-xs text-slate-500 font-mono mt-1">見積番号: {editId ? editId.substring(0,8) : "新規発行"}</p>
+                  <p className="text-xs text-slate-500 font-mono mt-1">見積番号: {editId ? editId.substring(0, 8) : "新規発行"}</p>
                 </div>
               </div>
 

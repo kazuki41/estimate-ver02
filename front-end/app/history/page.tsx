@@ -9,7 +9,7 @@ export default function HistoryPage() {
   const [estimates, setEstimates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [checkedIds, setCheckedIds] = useState<string[]>([]); 
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadHistory();
@@ -31,10 +31,10 @@ export default function HistoryPage() {
   // 🔄 ステータス切り替え処理（デバッグ強化版）
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === "submitted" ? "draft" : "submitted";
-    
+
     try {
       // 画面上の表示を先制してサッと切り替える
-      setEstimates(prev => 
+      setEstimates(prev =>
         prev.map(est => est.id === id ? { ...est, status: nextStatus } : est)
       );
 
@@ -44,7 +44,7 @@ export default function HistoryPage() {
         body: JSON.stringify({ id, status: nextStatus })
       });
       const data = await res.json();
-      
+
       // 💡 【ここが進化】もし失敗したら、Supabaseから届いた生のエラー文をポップアップに出します！
       if (!data.success) {
         alert(`❌ ステータスの更新に失敗しました。\n【エラー理由】: ${data.message || "原因不明のAPIエラー"}`);
@@ -100,16 +100,21 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans p-8">
       <div className="max-w-5xl mx-auto">
-        
+
         {/* ヘッダー */}
         <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-5">
           <div>
             <h1 className="text-2xl font-black tracking-tight">保存済み見積もり履歴</h1>
             <p className="text-sm text-slate-400 mt-1">一覧から直接ステータスを切り替えることができます</p>
           </div>
-          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl transition border border-slate-700/80 shadow">
-            ダッシュボードに戻る
-          </Link>
+          <div>
+            <Link href="/chat" className="mr-[20px] bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl transition border border-slate-700/80 shadow">
+              チャットに戻る
+            </Link>
+            <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl transition border border-slate-700/80 shadow">
+              ダッシュボードに戻る
+            </Link>
+          </div>
         </div>
 
         {/* 操作パネル */}
@@ -142,7 +147,7 @@ export default function HistoryPage() {
 
               return (
                 <div key={est.id} className={`border rounded-2xl p-5 flex flex-wrap justify-between items-center gap-4 transition ${isChecked ? "bg-blue-950/20 border-blue-500/50 shadow-lg" : "bg-slate-800 border-slate-700/60 hover:border-slate-600"}`}>
-                  
+
                   {/* 左側：チェック + 顧客情報 */}
                   <div className="flex items-start gap-4 max-w-xl">
                     <input type="checkbox" checked={isChecked} onChange={() => handleCheck(est.id)} className="w-4 h-4 rounded accent-blue-500 mt-1 cursor-pointer flex-shrink-0" />
@@ -158,17 +163,16 @@ export default function HistoryPage() {
 
                   {/* 右側 */}
                   <div className="flex items-center gap-6 ml-auto sm:ml-0 flex-wrap">
-                    
+
                     {/* ステータス切り替えトグル */}
                     <div className="flex flex-col items-start gap-1">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ステータス</span>
                       <button
                         onClick={() => handleToggleStatus(est.id, currentStatus)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all shadow-sm ${
-                          currentStatus === "submitted"
+                        className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all shadow-sm ${currentStatus === "submitted"
                             ? "bg-blue-600/20 text-blue-400 border-blue-900/60 hover:bg-blue-600/30"
                             : "bg-amber-500/10 text-amber-400 border-amber-900/40 hover:bg-amber-500/20"
-                        }`}
+                          }`}
                       >
                         {currentStatus === "submitted" ? "🚀 提出済み (クリックで下書きへ)" : "📝 下書き (クリックで提出済みへ)"}
                       </button>
@@ -178,7 +182,7 @@ export default function HistoryPage() {
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">見積合計(税別)</p>
                       <p className="text-xl font-black text-amber-400 font-mono mt-0.5">¥{total.toLocaleString()}</p>
                     </div>
-                    
+
                     <button onClick={() => handleEdit(est.id)} className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-blue-400 text-xs font-bold px-3.5 py-2 rounded-xl transition">
                       修正・再編集 ➔
                     </button>
