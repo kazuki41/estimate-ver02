@@ -2,8 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/app/supabase";
+
 
 export default function MasterPage() {
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<"company" | "customer" | "product">("company");
 
   // 🏢 自社情報用の状態
@@ -37,6 +42,33 @@ export default function MasterPage() {
   useEffect(() => {
     loadAllMasters();
   }, []);
+
+  // 🛡️ 門番：管理者（admin）以外が直打ちで入ってきたら強制送還する
+  useEffect(() => {
+    const checkAdmin = async () => {
+      // 1. 現在のログインユーザーを取得
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // 2. ログインしていない、または profiles の role が admin じゃない場合は即退場
+      if (!user) {
+        router.push("/"); // ログイン画面やトップへ
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || profile.role !== "admin") {
+        alert("🔒 閲覧権限がありません。トップページに戻ります。");
+        router.push("/"); // 強制送還！
+      }
+    };
+
+    checkAdmin();
+  }, [router]);
 
   const loadAllMasters = async () => {
     setLoading(true);

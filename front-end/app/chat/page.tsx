@@ -29,6 +29,7 @@ function ChatHome() {
   const [estimateStatus, setEstimateStatus] = useState<"draft" | "submitted">("draft");
   const [isOpenPDFModal, setIsOpenPDFModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("user");
 
   // 🛡️ 復元処理の重複防止ロック
   const hasRestored = useRef(false);
@@ -50,12 +51,22 @@ function ChatHome() {
     loadCustomers();
   }, [editId]);
 
-  // 👤 ログイン中のユーザーのUUIDをSupabaseから取得して、上の箱に保存する
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
+
+        // 💡 データベースの profiles からこのユーザーの権限（role）を取得する
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile) {
+          setUserRole(profile.role); // 'admin' または 'user' が入る
+        }
       }
     };
     fetchUser();
@@ -210,7 +221,10 @@ function ChatHome() {
             <div className="flex items-center gap-2 mt-0.5">
               <p className="text-xs text-slate-400">ログイン中: demo さん</p>
               <Link href="/history" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">履歴一覧 ➔</Link>
-              <Link href="/master" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">マスター管理 ⚙️</Link>
+              {/* 💡 管理者の時だけ「マスター管理」ボタンを出現させる！ */}
+              {userRole === "admin" && (
+                <Link href="/master" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">マスター管理 ⚙️</Link>
+              )}
             </div>
           </div>
         </div>
@@ -247,8 +261,8 @@ function ChatHome() {
               onClick={() => setIsOpenPDFModal(true)}
               disabled={quoteItems.length === 0}
               className={`text-xs font-bold px-3 py-2 rounded border transition ${quoteItems.length > 0
-                  ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-500 cursor-pointer shadow-sm"
-                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-500 cursor-pointer shadow-sm"
+                : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
                 }`}
             >
               📄 PDFプレビュー
@@ -258,8 +272,8 @@ function ChatHome() {
               onClick={handleSaveEstimate}
               disabled={quoteItems.length === 0 || !isChanged || isSaving}
               className={`text-xs font-medium px-3 py-2 rounded border transition ${quoteItems.length > 0 && isChanged && !isSaving
-                  ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 cursor-pointer shadow-sm"
-                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 cursor-pointer shadow-sm"
+                : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
                 }`}
             >
               {isSaving ? "保存中..." : "見積もりを保存"}

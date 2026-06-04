@@ -8,6 +8,8 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState("kazuki441141@gmail.com");
   const [estimates, setEstimates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("user");
 
   // 👤 ログインユーザーのメールアドレスを安全に取得
   useEffect(() => {
@@ -19,6 +21,27 @@ export default function DashboardPage() {
     };
     getUser();
     loadDashboardStats();
+  }, []);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+
+        // 💡 データベースの profiles からこのユーザーの権限（role）を取得する
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile) {
+          setUserRole(profile.role); // 'admin' または 'user' が入る
+        }
+      }
+    };
+    fetchUser();
   }, []);
 
   // 📊 リアルタイム集計のために最新の全見積もりデータを取得
@@ -68,7 +91,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans p-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* ヘッダーセクション */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-6">
           <div>
@@ -79,7 +102,7 @@ export default function DashboardPage() {
             <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-xs font-mono text-slate-300 shadow">
               👤 {userEmail}
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               className="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 text-xs font-bold px-4 py-2.5 rounded-xl transition shadow"
             >
@@ -90,7 +113,7 @@ export default function DashboardPage() {
 
         {/* 📊 4つのアナリティクスカード（💡ここがリアルタイム化しました！） */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          
+
           {/* カード1: 提出済 合計金額 */}
           <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
             <p className="text-xs font-bold text-slate-400 tracking-wider">提出済 合計金額(税別)</p>
@@ -133,11 +156,11 @@ export default function DashboardPage() {
         {/* 🚀 主要機能へのアクセス（メニュータイル） */}
         <div className="bg-slate-800/40 border border-slate-800 rounded-3xl p-6 shadow-inner space-y-4">
           <h2 className="text-sm font-bold text-slate-400 tracking-widest uppercase pl-1">主要機能へのアクセス</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
+
+          <div className="flex flex-col md:flex-row gap-6 mx-auto max-w-6xl w-full">
+
             {/* タイル1: AI自動見積チャット */}
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 border border-blue-500 rounded-2xl p-6 shadow-xl flex flex-col justify-between h-48 group hover:from-blue-500 hover:to-blue-600 transition duration-300">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-700 border border-blue-500 rounded-2xl p-6 shadow-xl flex flex-col flex-1 justify-between h-48 group hover:from-blue-500 hover:to-blue-600 transition duration-300">
               <div className="space-y-2">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">AI自動見積チャット 🚀</h3>
                 <p className="text-xs text-blue-100 leading-relaxed">対話形式で要件を伝えるだけで、AIがマスターから適正単価を引いて自動で見積明細を組み立てます。</p>
@@ -148,7 +171,7 @@ export default function DashboardPage() {
             </div>
 
             {/* タイル2: 保存済み見積もり履歴 */}
-            <div className="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between h-48 hover:border-slate-600 transition duration-300">
+            <div className="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl flex flex-col flex-1 justify-between h-48 hover:border-slate-600 transition duration-300">
               <div className="space-y-2">
                 <h3 className="text-lg font-bold tracking-tight text-slate-200">保存済み見積もり履歴 📄</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">これまでに作成した見積もりの一括検索、ステータスの切り替え（下書き/提出済）、プロ仕様のPDF出力・印刷が行えます。</p>
@@ -159,16 +182,17 @@ export default function DashboardPage() {
             </div>
 
             {/* タイル3: 各種マスター管理 */}
-            <div className="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between h-48 hover:border-slate-600 transition duration-300">
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold tracking-tight text-slate-200">各種マスター管理 ⚙️</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">自社情報（インボイス番号等）、顧客情報、商品単価・課金タイプを管理。AIの知識ベースとも連動します。</p>
+            {userRole === "admin" && (
+              <div className="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl flex flex-col flex-1 justify-between h-48 hover:border-slate-600 transition duration-300">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold tracking-tight text-slate-200">各種マスター管理 ⚙️</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">自社情報（インボイス番号等）、顧客情報、商品単価・課金タイプを管理。AIの知識ベースとも連動します。</p>
+                </div>
+                <Link href="/master" className="inline-block text-center bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold py-2.5 rounded-xl transition border border-slate-600">
+                  設定画面を開く ➔
+                </Link>
               </div>
-              <Link href="/master" className="inline-block text-center bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold py-2.5 rounded-xl transition border border-slate-600">
-                設定画面を開く ➔
-              </Link>
-            </div>
-
+            )}
           </div>
         </div>
 
