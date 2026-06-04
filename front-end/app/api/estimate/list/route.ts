@@ -13,6 +13,7 @@ export async function GET() {
         created_at,
         customer_id,
         status, 
+        created_by,
         customers (
           id,
           company_name,

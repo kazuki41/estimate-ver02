@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/app/supabase";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -10,9 +11,17 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [searchMode, setSearchMode] = useState<"all" | "mine">("all");
 
   useEffect(() => {
     loadHistory();
+    // 💡 自分のIDをSupabaseから取得して状態に入れる
+    const getMyId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
+    };
+    getMyId();
   }, []);
 
   const loadHistory = async () => {
@@ -117,6 +126,22 @@ export default function HistoryPage() {
           </div>
         </div>
 
+        {/* 👈 💡 ここに以下ボタンコード */}
+        <div className="flex bg-slate-800 rounded-xl p-1 border border-slate-700 w-fit text-xs mb-4">
+          <button 
+            onClick={() => setSearchMode("all")}
+            className={`px-4 py-2 rounded-lg font-bold transition ${searchMode === "all" ? "bg-blue-600 text-white" : "text-slate-400"}`}
+          >
+            🌐 全体の見積もり
+          </button>
+          <button 
+            onClick={() => setSearchMode("mine")}
+            className={`px-4 py-2 rounded-lg font-bold transition ${searchMode === "mine" ? "bg-blue-600 text-white" : "text-slate-400"}`}
+          >
+            👤 自分の見積もり
+          </button>
+        </div>
+
         {/* 操作パネル */}
         <div className="bg-slate-800 border border-slate-700/70 rounded-2xl p-4 mb-6 flex flex-wrap justify-between items-center gap-4 shadow-xl">
           <div className="flex items-center gap-3">
@@ -140,7 +165,9 @@ export default function HistoryPage() {
         ) : (
           /* 📋 履歴カードリスト */
           <div className="space-y-3">
-            {estimates.map((est) => {
+            {estimates
+            .filter(est => searchMode === "all" || est.created_by === currentUserId)
+            .map((est) => {
               const total = est.estimate_items?.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0) || 0;
               const isChecked = checkedIds.includes(est.id);
               const currentStatus = est.status === "submitted" ? "submitted" : "draft";
