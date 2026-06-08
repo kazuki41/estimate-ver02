@@ -33,6 +33,12 @@ function ChatHome() {
 
   // 🛡️ 復元処理の重複防止ロック
   const hasRestored = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 🟢 追加：messages が変わったら一番下へスクロール
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // 画面起動時に顧客マスター一覧を読み込む
   useEffect(() => {
@@ -211,10 +217,10 @@ function ChatHome() {
   const currentCustomerName = customers.find(c => c.id === selectedCustomerId)?.company_name || "御中";
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white font-sans print:bg-white print:text-black">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-900 text-white font-sans print:bg-white print:text-black">
 
       {/* 左側：チャットエリア */}
-      <div className="w-1/2 flex flex-col border-r border-slate-700 print:hidden">
+      <div className="md:w-1/2 flex flex-col border-r border-slate-700 print:hidden">
         <div className="p-4 bg-slate-800 flex justify-between items-center border-b border-slate-700">
           <div>
             <h1 className="text-lg font-bold">AI見積もり相談チャット</h1>
@@ -240,6 +246,8 @@ function ChatHome() {
               <div className="bg-slate-700 text-slate-400 p-3 rounded-2xl rounded-tl-none text-xs animate-pulse">AIが自動見積もりを計算中...</div>
             </div>
           )}
+
+          <div ref={messagesEndRef} />
         </div>
 
         <form onSubmit={handleSend} className="p-4 bg-slate-800 border-t border-slate-700 flex gap-2">
@@ -249,7 +257,7 @@ function ChatHome() {
       </div>
 
       {/* 右側：見積プレビューエリア */}
-      <div className="w-1/2 flex flex-col bg-white text-slate-800 p-6 overflow-y-auto print:hidden">
+      <div className="md:w-1/2 flex flex-col bg-white text-slate-800 p-6 overflow-y-auto print:hidden">
 
         <div className="flex justify-between items-start mb-4">
           <div>

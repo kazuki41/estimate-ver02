@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // 🔐 改良版：クッキーが存在し、かつ中身（value）が空っぽ（""）ではないことまで厳密にチェック！
   const allCookies = request.cookies.getAll();
   const isLoggedIn = allCookies.some(
