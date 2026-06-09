@@ -21,21 +21,19 @@ function ChatHome() {
   const [isSaving, setIsSaving] = useState(false);
   const [isChanged, setIsChanged] = useState(false);
 
-  // 👥 顧客選択用の状態
+  // 顧客選択用の状態
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
-  // 📄 内部的な管理用のステータス（UIからは見えなくなります）
+  //  内部的な管理用のステータス
   const [estimateStatus, setEstimateStatus] = useState<"draft" | "submitted">("draft");
   const [isOpenPDFModal, setIsOpenPDFModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("user");
 
-  // 🛡️ 復元処理の重複防止ロック
   const hasRestored = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 🟢 追加：messages が変わったら一番下へスクロール
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -63,7 +61,6 @@ function ChatHome() {
       if (user) {
         setCurrentUserId(user.id);
 
-        // 💡 データベースの profiles からこのユーザーの権限（role）を取得する
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
@@ -197,7 +194,7 @@ function ChatHome() {
 
       const data = await response.json();
       if (data.success) {
-        alert("🎉 選択した顧客宛てに見積もりを正常に保存しました！");
+        alert("選択した顧客宛てに見積もりを正常に保存しました！");
         setIsChanged(false);
       } else {
         alert("保存に失敗しました: " + data.message);
@@ -227,7 +224,7 @@ function ChatHome() {
             <div className="flex items-center gap-2 mt-0.5">
               <p className="text-xs text-slate-400">ログイン中: demo さん</p>
               <Link href="/history" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">履歴一覧 ➔</Link>
-              {/* 💡 管理者の時だけ「マスター管理」ボタンを出現させる！ */}
+             
               {userRole === "admin" && (
                 <Link href="/master" className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded transition">マスター管理 ⚙️</Link>
               )}
@@ -350,12 +347,10 @@ function ChatHome() {
         </div>
       </div>
 
-      {/* 🖥️ 全画面PDFプレビューモーダル（ステータス表示を徹底排除） */}
-      {isOpenPDFModal && (
+        {isOpenPDFModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-start overflow-y-auto p-6 print:p-0 print:bg-white print:backdrop-blur-none print:static">
 
-          {/* コントロールヘッダー（左側のトグルを削除してスッキリ化！） */}
-          <div className="w-full max-w-3xl bg-slate-800 border border-slate-700 rounded-2xl p-4 flex justify-between items-center mb-6 shadow-2xl print:hidden">
+               <div className="w-full max-w-3xl bg-slate-800 border border-slate-700 rounded-2xl p-4 flex justify-between items-center mb-6 shadow-2xl print:hidden">
             <div className="text-xs font-bold text-slate-300">
               📄 見積書レイアウト確認プレビュー
             </div>
@@ -365,8 +360,7 @@ function ChatHome() {
             </div>
           </div>
 
-          {/* 📄 A4サイズ見積書（右上のバッジも完全削除！） */}
-          <div className="w-full max-w-3xl bg-white text-black p-12 shadow-2xl rounded-none border border-slate-200 flex flex-col justify-between min-h-[1000px] font-sans print:shadow-none print:border-none print:p-0 print:max-w-full print:w-full">
+                <div className="w-full max-w-3xl bg-white text-black p-12 shadow-2xl rounded-none border border-slate-200 flex flex-col justify-between min-h-[1000px] font-sans print:shadow-none print:border-none print:p-0 print:max-w-full print:w-full">
             <div>
               {/* 見積書ヘッダー */}
               <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-8">
