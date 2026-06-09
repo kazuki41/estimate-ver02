@@ -19,7 +19,6 @@ export async function POST(request: Request) {
       tel: item.tel || null,
     }));
 
-    // 🚀 Supabaseのinsertに配列をそのまま渡すことで「一撃（バルクインサート）」で高速登録！
     const { error } = await supabase.from("customers").insert(insertData);
 
     if (error) throw error;

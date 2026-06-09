@@ -36,17 +36,15 @@ export default function LoginPage() {
         if (error) throw error;
         setMessage("🎉 アカウントを作成しました！ログインモードに切り替えてログインしてください。");
       } else {
-        // 🔐 既存ユーザーのログイン
+        // 既存ユーザーのログイン
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        // 🔥 【最重要：検問突破トリック】
-        // ミドルウェア（検問）が読めるCookieのポケットに、Supabaseのトークンを手動でガツンと書き込みます！
+         // ミドルウェア（検問）
         if (data.session) {
           document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=86400; SameSite=Lax; Secure`;
         }
         
-        // 確実にトップページ（ダッシュボード）へ突入！
         window.location.href = "/";
       }
     } catch (error: any) {

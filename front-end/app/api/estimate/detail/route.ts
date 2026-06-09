@@ -9,8 +9,7 @@ export async function GET(request: Request) {
     if (!id) {
       return NextResponse.json({ message: "見積もりIDが指定されていません。" }, { status: 400 });
     }
-
-    // ★大改造：estimates（親）を起点に、顧客・自社・明細のすべてをガシャッと一撃で取得！
+    
     const { data: estimate, error } = await supabase
       .from("estimates")
       .select(`

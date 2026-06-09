@@ -4,10 +4,9 @@ import { supabase } from "@/app/supabase";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // ★追加：画面から顧客IDと自社情報IDも受け取る
+
     const { items, customerId, companyInfoId, status, userId } = body;
 
-    // 💡 🔥 【新設】ユーザーIDがちゃんと届いているか検証する門番
     if (!userId) {
       console.error("🚨 警告: バックエンドに userId が届いていません！");
       return NextResponse.json({ message: "エラー: ユーザーIDが届いていないため保存できません。" }, { status: 400 });
@@ -24,8 +23,8 @@ export async function POST(request: Request) {
         {
           status: status || "draft",
           tax_rate: 0.10,
-          customer_id: customerId || null,      // ★新しく作った列に保存！
-          company_info_id: companyInfoId || null, // ★新しく作った列に保存！
+          customer_id: customerId || null,    
+          company_info_id: companyInfoId || null, 
           created_by: userId || null
         }
       ])

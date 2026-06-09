@@ -11,7 +11,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "IDまたはステータスが不足しています。" }, { status: 400 });
     }
 
-    // 🚀 指定された見積もりIDの status カラム（draft または submitted）をピンポイントで更新！
     const { error } = await supabase
       .from("estimates")
       .update({ status: status })

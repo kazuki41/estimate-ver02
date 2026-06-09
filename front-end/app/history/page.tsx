@@ -16,7 +16,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadHistory();
-    // 💡 自分のIDをSupabaseから取得して状態に入れる
+    // 自分のIDをSupabaseから取得して状態に入れる
     const getMyId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setCurrentUserId(user.id);
@@ -37,13 +37,11 @@ export default function HistoryPage() {
     }
   };
 
-  // 🔄 ステータス切り替え処理（デバッグ強化版）
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === "submitted" ? "draft" : "submitted";
 
     try {
-      // 画面上の表示を先制してサッと切り替える
-      setEstimates(prev =>
+        setEstimates(prev =>
         prev.map(est => est.id === id ? { ...est, status: nextStatus } : est)
       );
 
@@ -54,8 +52,7 @@ export default function HistoryPage() {
       });
       const data = await res.json();
 
-      // 💡 【ここが進化】もし失敗したら、Supabaseから届いた生のエラー文をポップアップに出します！
-      if (!data.success) {
+           if (!data.success) {
         alert(`❌ ステータスの更新に失敗しました。\n【エラー理由】: ${data.message || "原因不明のAPIエラー"}`);
         await loadHistory(); // 元の状態に戻す
       }
@@ -126,7 +123,7 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* 👈 💡 ここに以下ボタンコード */}
+        {/* ここに以下ボタンコード */}
         <div className="flex bg-slate-800 rounded-xl p-1 border border-slate-700 w-fit text-xs mb-4">
           <button 
             onClick={() => setSearchMode("all")}
@@ -163,7 +160,7 @@ export default function HistoryPage() {
             <p className="text-slate-400 text-sm">見積もり履歴はまだありません。</p>
           </div>
         ) : (
-          /* 📋 履歴カードリスト */
+          /* 履歴カードリスト */
           <div className="space-y-3">
             {estimates
             .filter(est => searchMode === "all" || est.created_by === currentUserId)

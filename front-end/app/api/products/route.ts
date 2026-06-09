@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/app/supabase";
 
-// 📦 1. 全ての商品情報を取得する
+// 1. 全ての商品情報を取得する
 export async function GET() {
   try {
-    // ★ データベースにある全てのカラムを正確に取得
+    // データベースにある全てのカラムを正確に取得
     const { data: products, error } = await supabase
       .from("products")
       .select("id, name, description, category, price, unit, billing_type")
@@ -19,11 +19,11 @@ export async function GET() {
   }
 }
 
-// 💾 2. 商品情報を「新規追加」または「更新」する
+//  2. 商品情報を「新規追加」または「更新」する
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // ★ 全ての入力項目を画面から受け取る
+    //  全ての入力項目を画面から受け取る
     const { id, name, description, category, price, unit, billingType } = body;
 
     let error;

@@ -11,7 +11,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "削除するIDが指定されていません。" }, { status: 400 });
     }
 
-    // 🚀 Supabaseの「.in()」を使って、送られてきたIDの配列に一致するデータを一撃で一括削除！
     const { error } = await supabase
       .from("customers")
       .delete()

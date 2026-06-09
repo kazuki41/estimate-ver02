@@ -11,7 +11,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "削除するIDが指定されていません。" }, { status: 400 });
     }
 
-    // 🚀 商品データも指定されたIDリストをベースに一発で一括お掃除！
     const { error } = await supabase
       .from("products")
       .delete()

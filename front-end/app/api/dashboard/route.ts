@@ -5,7 +5,6 @@ import { supabase } from "@/app/supabase";
 
 export async function GET() {
   try {
-    // 📊 全ての見積もりと、それに紐づく品目（金額計算用）を一撃で取得
     const { data: estimates, error } = await supabase
       .from("estimates")
       .select(`

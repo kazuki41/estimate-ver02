@@ -11,12 +11,12 @@ export default function MasterPage() {
 
   const [activeTab, setActiveTab] = useState<"company" | "customer" | "product">("company");
 
-  // 🏢 自社情報用の状態
+  // 自社情報用の状態
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
 
-  // 👥 顧客マスター用の状態
+  // 顧客マスター用の状態
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [custCompanyName, setCustCompanyName] = useState("");
@@ -25,7 +25,7 @@ export default function MasterPage() {
   const [custTel, setCustTel] = useState("");
   const [checkedCustomerIds, setCheckedCustomerIds] = useState<string[]>([]); // 👈 顧客チェックボックス用
 
-  // 📦 商品マスター用の状態
+  // 商品マスター用の状態
   const [products, setProducts] = useState<any[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [prodName, setProdName] = useState("");
@@ -43,7 +43,6 @@ export default function MasterPage() {
     loadAllMasters();
   }, []);
 
-  // 🛡️ 門番：管理者（admin）以外が直打ちで入ってきたら強制送還する
   useEffect(() => {
     const checkAdmin = async () => {
       // 1. 現在のログインユーザーを取得
@@ -63,7 +62,7 @@ export default function MasterPage() {
 
       if (!profile || profile.role !== "admin") {
         alert("🔒 閲覧権限がありません。トップページに戻ります。");
-        router.push("/"); // 強制送還！
+        router.push("/"); 
       }
     };
 
@@ -103,7 +102,7 @@ export default function MasterPage() {
     setCheckedProductIds([]); // リフレッシュ時に選択をクリア
   };
 
-  // 🗑️ 顧客の複数同時削除処理
+  // 顧客の複数同時削除処理
   const handleBulkDeleteCustomers = async () => {
     if (checkedCustomerIds.length === 0) return;
     const confirmDelete = window.confirm(`⚠️ 選択された ${checkedCustomerIds.length} 件の顧客データを完全に削除しますか？\nこの操作は取り消せません。`);
@@ -130,7 +129,7 @@ export default function MasterPage() {
     }
   };
 
-  // 🗑️ 商品の複数同時削除処理
+  // 商品の複数同時削除処理
   const handleBulkDeleteProducts = async () => {
     if (checkedProductIds.length === 0) return;
     const confirmDelete = window.confirm(`⚠️ 選択された ${checkedProductIds.length} 件の商品データを完全に削除しますか？\nこの操作は取り消せません。`);
@@ -337,7 +336,7 @@ export default function MasterPage() {
           <div className="text-center py-12 text-slate-400 animate-pulse">データを読み込み中...</div>
         ) : (
           <div>
-            {/* 🏢 自社情報設定 */}
+            {/* 自社情報設定 */}
             {activeTab === "company" && (
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl max-w-2xl">
                 <form onSubmit={handleSaveCompany} className="space-y-6">
@@ -356,7 +355,7 @@ export default function MasterPage() {
               </div>
             )}
 
-            {/* 👥 顧客マスター */}
+            {/* 顧客マスター */}
             {activeTab === "customer" && (
               <div className="space-y-6">
                 {/* 操作パネル */}
@@ -414,7 +413,7 @@ export default function MasterPage() {
               </div>
             )}
 
-            {/* 📦 商品マスター */}
+            {/* 商品マスター */}
             {activeTab === "product" && (
               <div className="space-y-6">
                 {/* 操作パネル */}

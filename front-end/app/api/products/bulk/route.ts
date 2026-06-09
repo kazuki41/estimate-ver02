@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "登録データが空です。" }, { status: 400 });
     }
 
-    // 📦 商品テーブルのカラムに合わせてデータを整形
+    // 商品テーブルのカラムに合わせてデータを整形
     const insertData = items.map((item: any) => ({
       name: item.name,
       description: item.description || null,
@@ -21,7 +21,6 @@ export async function POST(request: Request) {
       billing_type: item.billingType === "recurring" ? "recurring" : "one-time",
     }));
 
-    // 🚀 大量の商品データを一発でSupabaseへ流し込む！
     const { error } = await supabase.from("products").insert(insertData);
 
     if (error) throw error;

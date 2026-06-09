@@ -12,8 +12,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // 💡 【超重要：記憶力の修復】
-    // 単一のメッセージではなく、フロント側から送られてくる「これまでの会話履歴（配列）」を丸ごと受け取ります
     const chatMessages = body.messages || []; 
     const currentItems = body.currentItems || []; 
 
@@ -110,8 +108,7 @@ ${productListString}
 ${currentItemsString}
 `,
         },
-        // 💡 【修正ポイント：チャットログの全展開】
-        // 過去のすべてのラリー（履歴）をOpenAIに丸ごと流し込んで読ませます！
+        // 過去のすべてのラリー（履歴）をOpenAIに丸ごと流し込み
         ...chatMessages 
       ],
     });

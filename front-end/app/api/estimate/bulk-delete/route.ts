@@ -11,7 +11,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "削除するIDが指定されていません。" }, { status: 400 });
     }
 
-    // 🚀 既存の「estimate」ルートの並びとして、安全に見積もりを一括削除！
     const { error } = await supabase
       .from("estimates")
       .delete()

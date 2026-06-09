@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "IDが必要です。" }, { status: 400 });
     }
 
-    // 🗑️ 1. 先に紐づいている見積明細（子）を削除
+    // 1. 先に紐づいている見積明細（子）を削除
     const { error: itemsError } = await supabase
       .from("estimate_items")
       .delete()
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     if (itemsError) throw itemsError;
 
-    // 🗑️ 2. 親の見積もり本体を削除
+    // 2. 親の見積もり本体を削除
     const { error: estimateError } = await supabase
       .from("estimates")
       .delete()

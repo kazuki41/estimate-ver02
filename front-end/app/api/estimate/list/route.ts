@@ -5,7 +5,6 @@ import { supabase } from "@/app/supabase";
 
 export async function GET() {
   try {
-    // 🚀 【修正】selectの中に「status」をしっかりと追加して、データベースから状態を回収します！
     const { data, error } = await supabase
       .from("estimates")
       .select(`

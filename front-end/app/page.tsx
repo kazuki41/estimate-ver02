@@ -11,7 +11,7 @@ export default function DashboardPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("user");
 
-  // 👤 ログインユーザーのメールアドレスを安全に取得
+  // ログインユーザーのメールアドレスを安全に取得
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -29,7 +29,7 @@ export default function DashboardPage() {
       if (user) {
         setCurrentUserId(user.id);
 
-        // 💡 データベースの profiles からこのユーザーの権限（role）を取得する
+        // データベースの profiles からこのユーザーの権限（role）を取得する
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
@@ -44,7 +44,7 @@ export default function DashboardPage() {
     fetchUser();
   }, []);
 
-  // 📊 リアルタイム集計のために最新の全見積もりデータを取得
+  // リアルタイム集計のために最新の全見積もりデータを取得
   const loadDashboardStats = async () => {
     try {
       const res = await fetch("/api/estimate/list?_t=" + Date.now());
@@ -57,7 +57,7 @@ export default function DashboardPage() {
     }
   };
 
-  // 🏃‍♂️ ログアウト処理（クッキー完全破棄の超確実版）
+  //  ログアウト処理
   const handleLogout = async () => {
     const confirmLogout = window.confirm("🔐 システムからログアウトしますか？");
     if (!confirmLogout) return;
@@ -67,9 +67,6 @@ export default function DashboardPage() {
     window.location.href = "/login";
   };
 
-  // ==========================================
-  // ⚡️ 脳内リアルタイム自動集計ロジック
-  // ==========================================
   // 1. 総作成件数
   const totalCreatedCount = estimates.length;
 
@@ -81,7 +78,7 @@ export default function DashboardPage() {
   const draftEstimates = estimates.filter(e => e.status !== "submitted"); // statusが未設定、またはdraftのもの
   const totalDraftCount = draftEstimates.length;
 
-  // 4. 提出済みの見積もりだけの「売上見込み総額」をガツンと計算
+  // 4. 提出済みの見積もりだけの「売上見込み総額」を計算
   const totalSubmittedAmount = submittedEstimates.reduce((sum, est) => {
     const estimateTotal = est.estimate_items?.reduce((s: number, item: any) => s + (item.price * item.quantity), 0) || 0;
     return sum + estimateTotal;
@@ -111,7 +108,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 📊 4つのアナリティクスカード（💡ここがリアルタイム化しました！） */}
+        {/* 4つのアナリティクスカード*/}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
 
           {/* カード1: 提出済 合計金額 */}
@@ -153,7 +150,7 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* 🚀 主要機能へのアクセス（メニュータイル） */}
+        {/* 主要機能へのアクセス（メニュータイル） */}
         <div className="bg-slate-800/40 border border-slate-800 rounded-3xl p-6 shadow-inner space-y-4">
           <h2 className="text-sm font-bold text-slate-400 tracking-widest uppercase pl-1">主要機能へのアクセス</h2>
 

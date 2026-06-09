@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/app/supabase";
 
-// 🏢 1. 現在の自社情報を取得する（画面を開いた時に呼び出される）
+// 1. 現在の自社情報を取得する
 export async function GET() {
   try {
     const { data: company, error } = await supabase
@@ -21,7 +21,7 @@ export async function GET() {
   }
 }
 
-// 💾 2. 画面から届いた内容で自社情報を更新する（保存ボタンを押した時に呼び出される）
+// 2. 画面から届いた内容で自社情報を更新する（保存ボタンを押した時に呼び出される）
 export async function POST(request: Request) {
   try {
     const body = await request.json();
